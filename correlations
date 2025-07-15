@@ -1,0 +1,17 @@
+import pandas as pd
+from scipy.stats import pearsonr, spearmanr
+
+df = pd.read_excel(r"C:\Users\gayat\OneDrive\Desktop\protherm_data.xlsx")
+
+a = df['Tm_(C)'][:730]
+b = df['Tm_(C)'][730:]
+
+a = a.reset_index(drop=True)
+b = b.reset_index(drop=True)
+merged = pd.DataFrame({'A': a, 'B': b}).dropna()
+
+pearson, _ = pearsonr(merged['A'], merged['B'])
+spearman, _ = spearmanr(merged['A'], merged['B'])
+
+print("Pearson:", pearson)
+print("Spearman:", spearman)
