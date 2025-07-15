@@ -1,0 +1,97 @@
+import os
+import numpy as np
+import networkx as nx
+from Bio.PDB import PDBParser
+import matplotlib.pyplot as plt
+
+def build_residue_network(pdb_file, cutoff=7.0):
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("AF_model", pdb_file)
+
+    residues = []
+    coords = []
+
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                if "CA" in residue:
+                    residues.append(residue)
+                    coords.append(residue["CA"].coord)
+    coords = np.array(coords)
+    
+    G = nx.Graph()
+
+    for i, res_i in enumerate(residues):
+        G.add_node(i, resname=res_i.get_resname(), res_id=res_i.get_id()[1])
+        for j in range(i + 1, len(residues)):
+            dist = np.linalg.norm(coords[i] - coords[j])
+            if dist <= cutoff:
+                G.add_edge(i, j, weight=dist)  # Add edge with weight = distance
+
+    return G, coords
+
+def analyze_network(G, name="Protein"):
+    print(f"\n--- {name} ---")
+    print(f"Number of nodes (residues): {G.number_of_nodes()}")
+    print(f"Number of edges: {G.number_of_edges()}")
+    print(f"Average degree: {np.mean([d for n, d in G.degree()]):.2f}")
+    
+    C = nx.average_clustering(G)
+    print(f"Clustering coefficient (C): {C:.4f}")
+
+    if nx.is_connected(G):
+        L = nx.average_shortest_path_length(G, weight="weight")
+        print(f"Average shortest path length (L): {L:.4f}")
+    else:
+        largest_cc = max(nx.connected_components(G), key=len)
+        subgraph = G.subgraph(largest_cc)
+        L = nx.average_shortest_path_length(subgraph, weight="weight")
+        print(f"Average shortest path length (L) [largest component]: {L:.4f}")
+    
+    n = G.number_of_nodes()
+    k = np.mean([d for _, d in G.degree()])
+    if k > 1:
+        L_random = np.log(n) / np.log(k)
+        print(f"L / L_random: {L / L_random:.2f}")
+        print(f"Small-world-like: {'Yes' if C > 0.1 and L / L_random < 2 else 'No'}")
+    else:
+        print("Average degree too low to assess small-world-ness.")
+
+def visualize_network(G, coords, title="Residue Network"):
+    plt.figure(figsize=(10, 8))
+    pos = {i: coords[i][:2] for i in G.nodes()}  # XY coordinates only
+    nx.draw(G, pos, node_size=30, with_labels=False, edge_color='gray')
+    plt.title(title)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+def compute_laplacian(G):
+    L = nx.laplacian_matrix(G).todense()
+    print("\nLaplacian matrix (first 5x5 block):")
+    print(np.round(np.array(L[:5, :5]), 2))  # Print just a small part
+    return L
+
+def shortest_residue_path(G, start, end):
+    try:
+        path = nx.shortest_path(G, source=start, target=end, weight="weight")
+        print(f"\nShortest path (by distance) from residue {start} to {end}: {path}")
+        total_dist = sum(G[u][v]['weight'] for u, v in zip(path[:-1], path[1:]))
+        print(f"Total physical distance: {total_dist:.2f} Å")
+    except nx.NetworkXNoPath:
+        print(f"\nNo path found between residue {start} and {end}.")
+
+pdb_files = [
+    "C:/Users/gayat/Downloads/5gv3.pdb",
+    "C:/Users/gayat/Downloads/1aar.pdb"
+]
+
+for pdb_file in pdb_files:
+    if os.path.exists(pdb_file):
+        G, coords = build_residue_network(pdb_file, cutoff=8.0)
+        analyze_network(G, name=pdb_file)
+        visualize_network(G, coords, title=os.path.basename(pdb_file))
+        compute_laplacian(G)
+        shortest_residue_path(G, start=10, end=30)  # Change start/end as needed
+    else:
+        print(f"{pdb_file} not found.")
