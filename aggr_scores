@@ -1,0 +1,38 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jun 22 14:59:42 2025
+
+@author: gayat
+"""
+
+import pandas as pd
+from pathlib import Path
+import re
+
+excel_file = "C:/Users/gayat/OneDrive/Desktop/TANGO_Results.xlsx"
+
+txt_folder = Path("C:/Users/gayat/OneDrive/Desktop/tango_outputs")
+
+df = pd.read_excel(excel_file)
+
+def get_agg_score(txt_path):
+    try:
+        with open(txt_path, "r") as f:
+            content = f.read()
+            match = re.search(r"AGG\s+([0-9.]+)", content)
+            if match:
+                return float(match.group(1))
+    except Exception:
+        pass
+    return None
+
+agg_scores = []
+for uniprot_id in df["UNIPROT_ID"]:
+    txt_file = txt_folder / f"{uniprot_id}.txt"
+    score = get_agg_score(txt_file) if txt_file.exists() else None
+    agg_scores.append(score)
+
+df["AGG_Score"] = agg_scores
+
+df.to_excel("TANGO_Results_with_AGG.xlsx", index=False)
+print("Saved as TANGO_Results_with_AGG.xlsx")
