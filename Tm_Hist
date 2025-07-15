@@ -1,0 +1,13 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
+df = pd.read_csv('C:/Users/gayat/OneDrive/Desktop/leuenberger-ecoli.csv')
+
+x = df['Tm_Peptide']
+
+plt.hist(x, bins=30, alpha=0.7, edgecolor='black')
+plt.title("Distribution of Peptide Tm (E. coli)")
+plt.xlabel("Peptide Tm")
+plt.ylabel("Frequency")
+plt.grid(True)
+plt.show()
