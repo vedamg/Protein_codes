@@ -1,0 +1,38 @@
+import os
+import gzip
+import pandas as pd
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
+EXCEL_PATH = "C:/Users/gayat/OneDrive/Desktop/Sequences_with_SS.xlsx"
+UNIPROT_COLUMN = "UNIPROT_ID" 
+CIF_FOLDER = "C:/Users/gayat/OneDrive/Desktop/structure_data"  
+OUTPUT_PATH = "C:/Users/gayat/Downloads/output_with_plddt.xlsx"
+
+def extract_plddt_scores(cif_gz_path):
+    with gzip.open(cif_gz_path, "rt") as handle:
+        mmcif_dict = MMCIF2Dict(handle)
+    if "_ma_qa_metric_local.metric_value" in mmcif_dict:
+        return [float(x) for x in mmcif_dict["_ma_qa_metric_local.metric_value"]]
+    return []
+
+df = pd.read_excel(EXCEL_PATH)
+
+plddt_means = []
+
+for uniprot_id in df[UNIPROT_COLUMN]:
+    file_name = f"AF-{uniprot_id}-F1-model_v4.cif.gz"
+    file_path = os.path.join(CIF_FOLDER, file_name)
+    
+    if os.path.exists(file_path):
+        scores = extract_plddt_scores(file_path)
+        mean_score = sum(scores) / len(scores) if scores else None
+    else:
+        mean_score = None
+    
+    plddt_means.append(mean_score)
+
+df["pLDDT_mean"] = plddt_means
+
+# === Save updated Excel ===
+df.to_excel(OUTPUT_PATH, index=False)
+print(f"Saved with pLDDT scores to {OUTPUT_PATH}")
