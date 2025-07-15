@@ -1,0 +1,39 @@
+import os
+import gzip
+import subprocess
+from Bio.PDB import MMCIFParser
+
+structure_folder = "C:/Users/gayat/OneDrive/Desktop/structure_data"
+
+chimera_path = r"C:\Program Files\Chimera 1.18\bin\chimera.exe" 
+
+parser = MMCIFParser(QUIET=True)
+
+while True:
+    uniprot_id = input("Enter a UniProt ID (or 'exit' to quit): ").strip()
+    
+    if uniprot_id.lower() == 'exit':
+        break
+
+    filename = f"AF-{uniprot_id}-F1-model_v4.cif.gz"
+    gz_path = os.path.join(structure_folder, filename)
+    cif_path = os.path.join(structure_folder, f"{uniprot_id}.cif")
+    if not os.path.isfile(gz_path):
+        print(f"{uniprot_id}:File not found\n")
+        continue
+
+    try:
+        
+        with gzip.open(gz_path, "rt") as handle:
+            parser.get_structure(uniprot_id, handle)
+        print(f"{uniprot_id}: Structure available")
+
+        if not os.path.exists(cif_path):
+            with gzip.open(gz_path, "rb") as f_in, open(cif_path, "wb") as f_out:
+                f_out.write(f_in.read())
+
+        subprocess.run([chimera_path, cif_path])
+        print(f"{uniprot_id}:Opened in Chimera\n")
+
+    except Exception as e:
+        print(f"{uniprot_id}:Parsing error: {e}\n")
