@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun 24 16:57:38 2025
+
+@author: gayat
+"""
+
+import MDAnalysis as mda
+import MDAnalysis.analysis.rms
+import pandas as pd
+
+
+af_struct =pd.read_excel("C:/Users/gayat/OneDrive/Desktop/unique_id_mapping.xlsx")['From']
+expm_struct =pd.read_excel("C:/Users/gayat/OneDrive/Desktop/unique_id_mapping.xlsx") ['To']
+
+for i in range(len(af_struct)):
+    af_conf =mda.Universe("C:/Users/gayat/OneDrive/Desktop/extracted_data/AF-"+af_struct[i]+"-F1-model_v4.cif")
+    expm_conf =mda.Universe("C:/Users/gayat/OneDrive/Desktop/pdb_structures\pdb"+expm_struct[i].lower()+".ent")
+
+R = MDAnalysis.analysis.rms.RMSD(af_struct, expm_struct, select="backbone")
+R.run()
+
+rmsd = R.rmsd.T[1]
