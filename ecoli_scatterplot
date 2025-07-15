@@ -1,0 +1,13 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+df = pd.read_csv('C:/Users/gayat/OneDrive/Desktop/leuenberger-ecoli.csv')
+
+x = df['Tm_Peptide']
+y = df['Length']
+
+plt.scatter(x, y, alpha=0.5)
+plt.title("E. coli Data")
+plt.xlabel("Peptide Tm (Tm_Peptide)")
+plt.ylabel("Protein Length")
+plt.show()
+
