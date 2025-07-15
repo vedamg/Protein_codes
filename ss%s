@@ -1,0 +1,43 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun 24 15:05:08 2025
+
+@author: gayat
+"""
+
+import pandas as pd
+
+def calculate_structure_percentages(dssp_seq):
+    if not isinstance(dssp_seq, str) or not dssp_seq.strip():
+        return 0.0, 0.0, 0.0
+
+    total = len(dssp_seq)
+    alpha = sum(1 for c in dssp_seq if c in "HGI")  # H: alpha, G: 3-10, I: pi-helix
+    beta = sum(1 for c in dssp_seq if c in "EB")    # E: beta strand, B: beta bridge
+    coil = total - alpha - beta                     # All else is coil
+
+    alpha_pct = round((alpha / total) * 100, 2)
+    beta_pct = round((beta / total) * 100, 2)
+    coil_pct = round((coil / total) * 100, 2)
+
+    return alpha_pct, beta_pct, coil_pct
+
+excel_path = "C:/Users/gayat/OneDrive/Desktop/Sequences.xlsx"
+df = pd.read_excel(excel_path)
+
+alpha_list, beta_list, coil_list = [], [], []
+
+for dssp_seq in df['DSSP']:
+    alpha, beta, coil = calculate_structure_percentages(dssp_seq)
+    alpha_list.append(alpha)
+    beta_list.append(beta)
+    coil_list.append(coil)
+
+df["Alpha_%"] = alpha_list
+df["Beta_%"] = beta_list
+df["Coil_%"] = coil_list
+
+output_path = "C:/Users/gayat/OneDrive/Desktop/Sequences_with_SS.xlsx"
+df.to_excel(output_path, index=False)
+
+print(f"Saved secondary structure percentages to: {output_path}")
