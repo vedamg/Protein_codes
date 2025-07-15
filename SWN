@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jul 12 14:09:33 2025
+
+@author: gayat
+"""
+
+import os
+import numpy as np
+import networkx as nx
+from Bio.PDB import PDBParser
+
+def build_residue_network(pdb_file, cutoff=8.0):
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("model", pdb_file)
+
+    residues = []
+    coords = []
+
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                if "CA" in residue:
+                    residues.append(residue)
+                    coords.append(residue["CA"].coord)
+
+    G = nx.Graph()
+    for i, res_i in enumerate(residues):
+        G.add_node(i, resname=res_i.get_resname(), res_id=res_i.get_id()[1])
+        for j in range(i + 1, len(residues)):
+            dist = np.linalg.norm(coords[i] - coords[j])
+            if dist <= cutoff:
+                G.add_edge(i, j, weight=dist)
+    return G
+
+def sigma_small_world(G, n_random=20, seed=42):
+    np.random.seed(seed)
+    C = nx.average_clustering(G)
+    if not nx.is_connected(G):
+        Gc = G.subgraph(max(nx.connected_components(G), key=len)).copy()
+    else:
+        Gc = G
+    L = nx.average_shortest_path_length(Gc)
+
+    N = G.number_of_nodes()
+    k_avg = np.mean([d for _, d in G.degree()])
+    p = k_avg / (N - 1)
+    C_rand_list, L_rand_list = [], []
+
+    for i in range(n_random):
+        R = nx.erdos_renyi_graph(N, p, seed=seed+i)
+        if not nx.is_connected(R):
+            R = R.subgraph(max(nx.connected_components(R), key=len))
+        C_rand_list.append(nx.average_clustering(R))
+        L_rand_list.append(nx.average_shortest_path_length(R))
+
+    C_r = np.mean(C_rand_list)
+    L_r = np.mean(L_rand_list)
+    sigma = (C / C_r) / (L / L_r)
+    print(f"C = {C:.4f}, L = {L:.4f}")
+    print(f"C_r = {C_r:.4f}, L_r = {L_r:.4f}")
+    print(f"σ = {sigma:.4f}")
+    print(f"Small-world: {'Yes' if sigma > 1 else 'No'}")
+    return sigma
+
+pdb_files = [
+    "C:/Users/gayat/Downloads/1ubq.pdb",
+    "C:/Users/gayat/Downloads/1aki.pdb"
+]
+
+for pdb_path in pdb_files:
+    if os.path.exists(pdb_path):
+        print(f"\n--- Analyzing {os.path.basename(pdb_path)} ---")
+        G = build_residue_network(pdb_path)
+        sigma_small_world(G)
+    else:
+        print(f"{pdb_path} not found.")
