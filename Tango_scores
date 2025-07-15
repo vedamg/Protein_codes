@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun 20 10:14:15 2025
+
+@author: gayat
+"""
+
+import csv
+import subprocess
+from pathlib import Path
+import pandas as pd
+import re
+
+TANGO_EXEC = "C:/Users/gayat/Downloads/tango2_3_1.winXP_/Tango.exe"         
+INPUT_FILE = "C:/Users/gayat/OneDrive/Desktop/TANGO.txt"          
+OUTPUT_DIR = Path("tango_results")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+def run_tango(uniprot_id, sequence, temp, pH, ionic):
+    output_file = OUTPUT_DIR / f"{uniprot_id}.tango"
+    
+    cmd = [
+        TANGO_EXEC,
+        sequence,
+        str(temp),
+        str(pH),
+        str(ionic),
+        str(output_file)
+    ]
+    
+    try:
+        subprocess.run(cmd, check=True)
+        return output_file
+    except subprocess.CalledProcessError as e:
+        print(f"Error with {uniprot_id}: {e}")
+        return None
+
+def parse_tango_output(filepath):
+    try:
+        with open(filepath, "r") as f:
+            for line in f:
+                match = re.search(r"Total aggregation.*?(\d+\.?\d*)", line)
+                if match:
+                    return float(match.group(1))
+    except Exception as e:
+        print(f"Could not parse {filepath.name}: {e}")
+    return None
+
+results = []
+with open(INPUT_FILE, newline='') as csvfile:
+    reader = csv.reader(csvfile, delimiter='\t')
+    headers = next(reader)  # Skip header
+    
+    for row in reader:
+        try:
+            uniprot_id = row[0]
+            pH = float(row[3])
+            temp = float(row[4])
+            ionic = float(row[5])
+            sequence = row[6].strip()
+            
+            output_file = run_tango(uniprot_id, sequence, temp, pH, ionic)
+            score = parse_tango_output(output_file) if output_file else None
+            
+            results.append({
+                "UniProt_ID": uniprot_id,
+                "Temp": temp,
+                "pH": pH,
+                "Ionic": ionic,
+                "Aggregation_Score": score
+            })
+        except Exception as e:
+            print(f"Error processing row: {e}")
+
+df = pd.DataFrame(results)
+df.to_excel("TANGO_Results.xlsx", index=False)
+print("Saved results to TANGO_Results.xlsx")
